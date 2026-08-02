@@ -72,9 +72,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000` and log in with default Super Admin credentials:
-- **Email**: `admin@tummybot.com`
-- **Password**: `Admin@12345`
+Open `http://localhost:3000` and log in with your configured Super Admin account (default local seed email: `admin@tummybot.com`).
 
 ---
 
