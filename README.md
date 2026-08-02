@@ -1,150 +1,92 @@
-# WhatsApp Food Ordering System (Swiggy / Zomato style via WhatsApp)
+# 🍔 TummyBot — WhatsApp Food Ordering System
 
-An enterprise-grade, production-ready WhatsApp Food Ordering platform powered by Node.js, TypeScript, Express, Prisma ORM, PostgreSQL, and Next.js (Shadcn UI).
+An enterprise-grade, production-ready WhatsApp Food Ordering platform powered by Node.js, TypeScript, Express, Prisma ORM (SQLite), and Next.js (App Router, Tailwind CSS, Lucide Icons).
 
 ---
 
 ## 🚀 Key System Features
 
-- **Official WhatsApp Cloud API & Twilio Support**: Direct integration with Meta WhatsApp Cloud API and Twilio with provider abstraction.
-- **Dynamic WhatsApp Conversation State Engine**: Handles full customer session state, menu navigation, cart commands (`1 x 2`, `3 x 4`, `cart`, `add`, `remove 1`, `clear`, `checkout`), pickup slot selection, coupon redemption, track order, and reorders.
-- **Delayed Payment Flow (Crucial Workflow)**:
-  1. Customer places order on WhatsApp -> Order created as `PENDING`.
-  2. Admin reviews order on Dashboard & clicks **Accept Order** -> Kitchen starts preparing.
-  3. Kitchen clicks **Ready For Payment** -> System dispatches WhatsApp message with Order summary & **Dynamic UPI QR Code** (`upi://pay?...`).
-  4. Customer replies **PAID** or payment gateway webhook triggers -> Status updates to `PAYMENT_RECEIVED` & `READY_FOR_PICKUP`.
-  5. Order completed by staff.
-- **Restaurant Default Image Fallback**: Food items do not require individual photos. Each restaurant maintains a single default cover image. If a food item has no custom photo, the system automatically falls back to the restaurant default image.
-- **Dynamic UPI QR Code Generator**: Generates standard UPI string (`upi://pay?pa=...&pn=...&am=...&tn=...&tr=...`) with order number and exact amount.
+- **Direct Secondary Phone WhatsApp Engine (Baileys)**: Scan a QR code on your dashboard (`/dashboard/pair`) with any WhatsApp phone to turn it into your live automated food ordering chatbot — no Meta approval or Twilio credentials required!
+- **Dynamic WhatsApp Conversation State Engine**: Handles full customer session state, menu navigation, cart commands (`1 x 2`, `3 x 4`, `cart`, `add`, `remove 1`, `clear`, `checkout`), pickup slot selection, coupon redemption, order tracking, and reorders.
+- **Delayed Payment Flow & Visual PNG QR Code Generation**:
+  1. Customer places order on WhatsApp ➔ Order created as `PENDING` (Awaiting Restaurant Acceptance).
+  2. Restaurant manager reviews order on Dashboard & clicks **Accept Order** or **Ready For Payment**.
+  3. System automatically generates a **Dynamic PNG UPI Payment QR Code Image** (`upi://pay?...`) and sends it directly to the customer on WhatsApp.
+  4. Customer scans the QR code or pays to the UPI ID, then replies **PAID**.
+  5. Status updates to `PAYMENT_RECEIVED` & `READY_FOR_PICKUP`.
+  6. Order completed by staff.
+- **Dashboard QR Pairing Page (`/dashboard/pair`)**: Real-time QR code display for 1-click scanning and pairing of your secondary WhatsApp phone.
+- **Built-in WhatsApp Webhook Simulator (`/dashboard/simulator`)**: Live chat simulator in the admin dashboard for testing order flows without a physical phone.
 - **Role-Based Access Control (RBAC)**: JWT authentication with refresh tokens and roles (`SUPER_ADMIN`, `RESTAURANT_MANAGER`, `KITCHEN_STAFF`, `DELIVERY_STAFF`).
-- **Live Order Board & Catalog Administration**: Real-time order monitoring dashboard, CRUD for Restaurants, Zones, Blocks, Menu Categories, Food Items, Coupons, Pickup Slots, Staff Accounts, Analytics, and CSV Export.
+- **Live Order Board & Administration**: Real-time order monitoring dashboard, CRUD for Restaurants, Campus Zones & Blocks, Menu Categories, Food Items, Coupons, Pickup Slots, Staff Accounts, Analytics, and CSV Export.
 
 ---
 
-## 🛠️ Architecture & Tech Stack
+## 🛠️ Tech Stack & Architecture
 
 ```
-Customer WhatsApp  ──▶  Meta Cloud API  ──▶  Express API (Backend)  ──▶  PostgreSQL (Prisma ORM)
-                                                    ▲
-                                                    │
-                                         Next.js Admin Dashboard
+Customer WhatsApp  ──▶  Direct Baileys WhatsApp Engine  ──▶  Express API (Backend)  ──▶  Prisma ORM (SQLite)
+                                                                    ▲
+                                                                    │
+                                                        Next.js Admin Dashboard
 ```
 
-- **Backend**: Node.js, Express.js, TypeScript, Prisma ORM
-- **Database**: PostgreSQL
+- **Backend**: Node.js, Express.js, TypeScript, `@whiskeysockets/baileys`, Prisma ORM
+- **Database**: SQLite (`dev.db`)
 - **Frontend**: Next.js 14 (App Router), React, Tailwind CSS, Lucide Icons
 - **Security**: Helmet, Rate Limiting, CORS, JWT + Refresh Tokens, bcrypt
-- **API Docs**: Swagger UI (`http://localhost:5000/docs`)
-
----
-
-## 📋 Environment Setup & Configuration
-
-1. Copy `.env.example` to `backend/.env`:
-   ```bash
-   cp .env.example backend/.env
-   ```
-
-2. Configure Meta WhatsApp Credentials in `backend/.env`:
-   ```env
-   WHATSAPP_PROVIDER=meta
-   META_PHONE_NUMBER_ID=your_phone_number_id
-   META_WHATSAPP_TOKEN=your_meta_system_user_token
-   META_WEBHOOK_VERIFY_TOKEN=tummy_bot_verify_token_12345
-   ```
+- **API Documentation**: Swagger UI (`http://localhost:5000/docs`)
 
 ---
 
 ## 💻 Running Locally
 
-### 1. Database Setup & Migration
-
-Ensure PostgreSQL is running locally on port `5432` with database `tummy_bot`, or update `DATABASE_URL`.
+### 1. Backend Setup
 
 ```bash
 cd backend
 npm install
 
-# Run database migrations
-npx prisma migrate dev --name init
-
-# Seed database with Super Admin, Restaurants, Menu Items, Pickup Slots, and Coupons
+# Initialize Database Schema & Seed Data
+npx prisma db push
 npm run prisma:seed
-```
 
-Default Super Admin Credentials:
-- **Email**: `admin@tummybot.com`
-- **Password**: `Admin@12345`
-
-### 2. Start Backend API
-
-```bash
-cd backend
+# Start Backend API
 npm run dev
 ```
-- API Base URL: `http://localhost:5000/api`
-- Swagger API Docs: `http://localhost:5000/docs`
-- Health Check: `http://localhost:5000/health`
 
-### 3. Start Next.js Admin Dashboard
+Default Endpoints:
+- **API Base URL**: `http://localhost:5000/api`
+- **Swagger Docs**: `http://localhost:5000/docs`
+- **Health Check**: `http://localhost:5000/health`
+
+---
+
+### 2. Frontend Admin Dashboard Setup
 
 ```bash
 cd frontend
 npm install
+
+# Start Next.js Development Server
 npm run dev
 ```
-Open `http://localhost:3000` and sign in with default credentials.
+
+Open `http://localhost:3000` and log in with default Super Admin credentials:
+- **Email**: `admin@tummybot.com`
+- **Password**: `Admin@12345`
 
 ---
 
-## 📲 Meta WhatsApp Cloud API Webhook Setup
+## 📲 Pairing Your Secondary Phone as WhatsApp Bot
 
-1. Expose your backend port `5000` via ngrok or production domain:
-   ```bash
-   ngrok http 5000
-   ```
-2. In Meta App Dashboard -> **WhatsApp** -> **Configuration**:
-   - **Callback URL**: `https://your-domain.ngrok-free.app/api/webhook/whatsapp`
-   - **Verify Token**: `tummy_bot_verify_token_12345` (matches `META_WEBHOOK_VERIFY_TOKEN` in `.env`)
-3. Click **Verify and Save**.
-4. Subscribe to webhook field: `messages`.
+1. Open the Admin Dashboard at `http://localhost:3000`.
+2. Click **`Pair Bot Phone (QR)`** on the left menu (or go to `http://localhost:3000/dashboard/pair`).
+3. Open **WhatsApp** on your secondary phone ➔ **Settings** ➔ **Linked Devices** ➔ **Link a Device**.
+4. Scan the QR code on your computer screen.
+5. Text **`Hi`** from your primary phone to your secondary phone number to start ordering! 🍔🍕
 
 ---
 
-## 🐳 Production Deployment with Docker Compose
-
-Run the entire production stack (PostgreSQL + Backend API + Next.js Admin Dashboard) with a single command:
-
-```bash
-docker-compose up -d --build
-```
-
-Services exposed:
-- **Frontend Dashboard**: `http://localhost:3000`
-- **Backend API**: `http://localhost:5000/api`
-- **PostgreSQL**: Port `5432`
-
----
-
-## 📊 Live Order Workflow Diagram
-
-```
-[Customer WhatsApp] "Hi" -> Select Zone & Block -> Choose Restaurant -> Browse Menu -> Add Items ("2 x 1") -> Checkout -> Select Pickup Time -> Confirm Order
-                                                                  │
-                                                                  ▼
-                                                      [Admin Dashboard] (Pending)
-                                                                  │
-                                                        Admin clicks ACCEPT
-                                                                  │
-                                                        Kitchen starts PREPARING
-                                                                  │
-                                                      Admin clicks READY FOR PAYMENT
-                                                                  │
-                                                                  ▼
-[Customer WhatsApp] Received Order Summary + Dynamic UPI QR (`upi://pay?...`) -> Replies "PAID"
-                                                                  │
-                                                                  ▼
-                                                   [Admin Dashboard] PAYMENT_RECEIVED
-                                                                  │
-                                                         READY FOR PICKUP -> COMPLETED
-```
+## 📄 License
+This project is licensed under the MIT License.
