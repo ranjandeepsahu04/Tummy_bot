@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Production builds
+dist/
+**/dist/
+.next/
+**/.next/
+out/
+**/.env*
+!.env.example
+
+# Databases
+*.db
+*.db-journal
+dev.db
+prisma/dev.db
+
+# WhatsApp Session Keys
+baileys_auth/
+**/baileys_auth/
+
+# Logs & Environment
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+.system_generated/

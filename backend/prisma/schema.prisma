@@ -1,0 +1,289 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Admin {
+  id           String        @id @default(uuid())
+  name         String
+  email        String        @unique
+  passwordHash String
+  role         String        @default("RESTAURANT_MANAGER")
+  restaurantId String?
+  restaurant   Restaurant?   @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
+  isEnabled    Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  orderHistory OrderStatusHistory[]
+  auditLogs    AuditLog[]
+
+  @@map("admins")
+}
+
+model User {
+  id             String            @id @default(uuid())
+  whatsappNumber String            @unique
+  name           String?
+  defaultZoneId  String?
+  defaultBlockId String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  orders        Order[]
+  notifications Notification[]
+  sessions      WhatsAppSession[]
+
+  @@map("users")
+}
+
+model Zone {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  isEnabled Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  blocks      Block[]
+  restaurants Restaurant[]
+  orders      Order[]
+
+  @@map("zones")
+}
+
+model Block {
+  id        String   @id @default(uuid())
+  zoneId    String
+  zone      Zone     @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  name      String
+  isEnabled Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  restaurants Restaurant[]
+  orders      Order[]
+
+  @@unique([zoneId, name])
+  @@map("blocks")
+}
+
+model Restaurant {
+  id              String         @id @default(uuid())
+  name            String
+  zoneId          String
+  zone            Zone           @relation(fields: [zoneId], references: [id])
+  blockId         String
+  block           Block          @relation(fields: [blockId], references: [id])
+  address         String
+  phone           String
+  defaultImageUrl String         // Required default menu cover image per restaurant
+  upiId           String         @default("merchant@upi")
+  upiName         String         @default("Food Station")
+  isEnabled       Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  foodCategories FoodCategory[]
+  foodItems      FoodItem[]
+  pickupSlots    PickupSlot[]
+  orders         Order[]
+  admins         Admin[]
+
+  @@map("restaurants")
+}
+
+model FoodCategory {
+  id           String     @id @default(uuid())
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  name         String
+  sortOrder    Int        @default(0)
+  isEnabled    Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  foodItems FoodItem[]
+
+  @@map("food_categories")
+}
+
+model FoodItem {
+  id           String       @id @default(uuid())
+  restaurantId String
+  restaurant   Restaurant   @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  categoryId   String
+  category     FoodCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  name         String
+  description  String?
+  price        Float
+  imageUrl     String?      // Optional custom image URL (fallback to restaurant default image)
+  isAvailable  Boolean      @default(true)
+  inStock      Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  orderItems OrderItem[]
+
+  @@map("food_items")
+}
+
+model PickupSlot {
+  id            String     @id @default(uuid())
+  restaurantId  String
+  restaurant    Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  slotTime      String
+  maxOrders     Int        @default(20)
+  currentOrders Int        @default(0)
+  isEnabled     Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  orders Order[]
+
+  @@map("pickup_slots")
+}
+
+model Coupon {
+  id                String    @id @default(uuid())
+  code              String    @unique
+  discountType      String    @default("PERCENTAGE")
+  discountValue     Float
+  minOrderAmount    Float     @default(0)
+  maxDiscountAmount Float?
+  expiresAt         DateTime?
+  isEnabled         Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  orders Order[]
+
+  @@map("coupons")
+}
+
+model Order {
+  id             String      @id @default(uuid())
+  orderNumber    String      @unique
+  userId         String
+  user           User        @relation(fields: [userId], references: [id])
+  restaurantId   String
+  restaurant     Restaurant  @relation(fields: [restaurantId], references: [id])
+  zoneId         String
+  zone           Zone        @relation(fields: [zoneId], references: [id])
+  blockId        String
+  block          Block       @relation(fields: [blockId], references: [id])
+  pickupSlotId   String?
+  pickupSlot     PickupSlot? @relation(fields: [pickupSlotId], references: [id])
+  pickupTimeStr  String
+  totalAmount    Float
+  discountAmount Float       @default(0)
+  finalAmount    Float
+  status         String      @default("PENDING")
+  paymentStatus  String      @default("UNPAID")
+  paymentMethod  String?     @default("UPI_QR")
+  paymentTxnId   String?
+  upiQrData      String?
+  couponId       String?
+  coupon         Coupon?     @relation(fields: [couponId], references: [id])
+  notes          String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  orderItems   OrderItem[]
+  payments     Payment[]
+  history      OrderStatusHistory[]
+  notification Notification[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id         String   @id @default(uuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  foodItemId String
+  foodItem   FoodItem @relation(fields: [foodItemId], references: [id])
+  itemName   String
+  unitPrice  Float
+  quantity   Int
+  totalPrice Float
+
+  @@map("order_items")
+}
+
+model Payment {
+  id             String   @id @default(uuid())
+  orderId        String
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  provider       String
+  transactionRef String?
+  amount         Float
+  status         String
+  rawPayload     String?
+  createdAt      DateTime @default(now())
+
+  @@map("payments")
+}
+
+model Notification {
+  id                String   @id @default(uuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId           String?
+  order             Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  type              String
+  content           String
+  status            String   @default("SENT")
+  whatsappMessageId String?
+  createdAt         DateTime @default(now())
+
+  @@map("notifications")
+}
+
+model WhatsAppSession {
+  id                   String   @id @default(uuid())
+  whatsappNumber       String   @unique
+  user                 User     @relation(fields: [whatsappNumber], references: [whatsappNumber], onDelete: Cascade)
+  currentStep          String   @default("MAIN_MENU")
+  selectedZoneId       String?
+  selectedBlockId      String?
+  selectedRestaurantId String?
+  selectedCategoryId   String?
+  cartJson             String   @default("[]")
+  couponCode           String?
+  selectedPickupSlotId String?
+  lastActiveAt         DateTime @default(now())
+  contextJson          String   @default("{}")
+
+  @@map("whatsapp_sessions")
+}
+
+model OrderStatusHistory {
+  id               String   @id @default(uuid())
+  orderId          String
+  order            Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  fromStatus       String
+  toStatus         String
+  changedByAdminId String?
+  changedByAdmin   Admin?   @relation(fields: [changedByAdminId], references: [id], onDelete: SetNull)
+  notes            String?
+  createdAt        DateTime @default(now())
+
+  @@map("order_status_history")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  adminId   String?
+  admin     Admin?   @relation(fields: [adminId], references: [id], onDelete: SetNull)
+  action    String
+  target    String
+  ipAddress String?
+  details   String?
+  createdAt DateTime @default(now())
+
+  @@map("audit_logs")
+}
