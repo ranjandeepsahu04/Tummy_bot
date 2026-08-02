@@ -4,6 +4,7 @@ import { env } from './config/env';
 import { swaggerSpec } from './config/swagger';
 import { helmetMiddleware, corsMiddleware, apiRateLimiter, errorHandler } from './middlewares/securityMiddleware';
 import routes from './routes';
+import { BaileysProvider } from './services/whatsapp/providers/baileysProvider';
 
 const app = express();
 
@@ -11,14 +12,7 @@ const app = express();
 app.use(corsMiddleware);
 app.use(helmetMiddleware);
 
-// Localtunnel & Webhook bypass headers
-app.use((req, res, next) => {
-  res.setHeader('Bypass-Tunnel-Reminder', 'true');
-  res.setHeader('ngrok-skip-browser-warning', 'true');
-  next();
-});
-
-// Webhook raw body & urlencoded parser for Twilio / Meta POST requests
+// Body parsers
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -55,14 +49,10 @@ app.listen(PORT, () => {
   console.log(`🚀 WhatsApp Food Ordering Backend API running on port ${PORT}`);
   console.log(`📑 Swagger Documentation available at http://localhost:${PORT}/docs`);
   console.log(`🟢 Health Check available at http://localhost:${PORT}/health`);
-  console.log(`📲 WhatsApp Webhook Endpoint: http://localhost:${PORT}/api/webhook/whatsapp`);
-  console.log(`📲 Twilio Webhook Endpoint: http://localhost:${PORT}/api/webhook/twilio`);
   console.log(`=======================================================`);
 
-  if (env.WHATSAPP_PROVIDER === 'baileys') {
-    const { BaileysProvider } = require('./services/whatsapp/providers/baileysProvider');
-    BaileysProvider.initialize();
-  }
+  // Initialize Native Direct WhatsApp Engine
+  BaileysProvider.initialize();
 });
 
 export default app;
